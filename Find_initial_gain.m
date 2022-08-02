@@ -1,0 +1,91 @@
+clear;
+clc;
+
+m = ureal('m',1.3,'PlusMinus',0.2);
+b = ureal('b',10,'PlusMinus',5);
+tau = ureal('tau',0.05,'PlusMinus',0.02);
+beta = ureal('beta',300,'PlusMinus',100);
+% m = 1.3;
+% b = 10;
+% tau = 0.05;
+% beta = 300;
+
+A = [0 0 1 0 0 0;
+    0 0 0 1 0 0;
+    beta/m 0 -b/m 0 1/m 0;
+    0 0 0 -b/m 0 1/m;
+    0 0 0 0 -1/tau 0;
+    0 0 0 0 0 -1/tau;];
+
+B = [0 0;
+    0 0;
+    0 0;
+    0 0;
+    1/tau 0;
+    0 1/tau;];
+
+C = eye(6);
+
+D = zeros(6,2);
+
+open_sys = ss(A,B,C,D);
+open_sys.name = 'hand';
+
+k11 = realp('k11',0);
+k12 = realp('k12',0);
+k13 = realp('k13',0);
+k14 = realp('k14',0);
+k15 = realp('k15',0);
+k16 = realp('k16',0);
+
+k21 = realp('k21',0);
+k22 = realp('k22',0);
+k23 = realp('k23',0);
+k24 = realp('k24',0);
+k25 = realp('k25',0);
+k26 = realp('k26',0);
+
+K = [k11 k12 k13 k14 k15 k16;
+    k21 k22 k23 k24 k25 k26;];
+
+gain_sys = ss(zeros(2),zeros(2,6),zeros(2,2),K);
+gain_sys.name = 'gain';
+
+closed_sys = feedback(open_sys,gain_sys);
+
+closed_sys.InputName = {'u1','u2'};
+
+closed_sys.OutputName = {'x1','x2','x3','x4','x5','x6'};
+
+R = TuningGoal.LQG({'u1','u2'},{'x1','x2','x3','x4','x5','x6'},1e4,1);
+[rs_sys,~] = systune(closed_sys,R);
+
+k11_val = getBlockValue(rs_sys,'k11');
+k12_val = getBlockValue(rs_sys,'k12');
+k13_val = getBlockValue(rs_sys,'k13');
+k14_val = getBlockValue(rs_sys,'k14');
+k15_val = getBlockValue(rs_sys,'k15');
+k16_val = getBlockValue(rs_sys,'k16');
+
+k21_val = getBlockValue(rs_sys,'k21');
+k22_val = getBlockValue(rs_sys,'k22');
+k23_val = getBlockValue(rs_sys,'k23');
+k24_val = getBlockValue(rs_sys,'k24');
+k25_val = getBlockValue(rs_sys,'k25');
+k26_val = getBlockValue(rs_sys,'k26');
+
+Kval = [k11_val k12_val k13_val k14_val k15_val k16_val;
+    k21_val k22_val k23_val k24_val k25_val k26_val;];
+
+EIGEN = eig(A.NominalValue - B.NominalValue*Kval);
+EIGEN_open = eig(A.NominalValue);
+if all(EIGEN_open<0)
+    disp('System stable before search!');
+else
+    disp('System unstable before search!');
+end
+if all(EIGEN<0)
+    disp('Stabilizing gain found!');
+else
+    disp('Failed to find stabilizing gain!');
+end

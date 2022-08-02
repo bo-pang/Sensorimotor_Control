@@ -1,0 +1,30 @@
+clc;
+clear;
+clear global;
+load('HPC_Bo_1e6_1.mat');
+I = 10;
+Ipe = 1000;
+P_tr = zeros(n,n,I);
+theta_tr = zeros(n2,n2,I);
+P_hat = zeros(n,n,I);
+theta = zeros(n2,n2,I);
+K_tr = zeros(m,n,I);
+K_hat = zeros(m,n,I);
+K_tr(:,:,1) = K;
+K_hat(:,:,1) = K;
+P_tilde(:,:,I) = zeros(n,n,I);
+for i = 1:I-1
+    P_tr(:,:,i) = lyap((A-B*K_tr(:,:,i)), Q + K_tr(:,:,i)'*R*K_tr(:,:,i));
+    K_tr(:,:,i+1) = R\B'*P_tr(:,:,i);
+    P_tmp = zeros(n);
+    for j = 1:Ipe-1
+        theta_tmp = vec2sm(coef_est*sm2vec(P_tmp),n3);
+        P_tmp = theta_tmp(1:n,1:n) - K_hat(:,:,i)'*theta_tmp(1:m,1:n) - ...
+            theta_tmp(1:m,1:n)'*K_hat(:,:,i) ...
+            + Q + K_hat(:,:,i)'*R*K_hat(:,:,i);
+    end
+    P_hat = P_tmp;
+    theta_tmp = vec2sm(coef_est*sm2vec(P_tmp),n3);
+    K_hat(:,:,i+1) = R\theta_tmp(1:m,1:n);
+    P_tilde;
+end

@@ -1,0 +1,193 @@
+clc;
+clear;
+global A B G n q;
+
+
+
+% NF
+load('Kstar_approx_NF');
+load('Model_NF');
+
+[n, m] = size(B);
+
+q = length(G);
+dt = 0.0001;
+N = 18000;
+t = dt*[0:N-1];
+
+% Check stability
+Mat_stab = stochastic_sys_mat(Kstar_approx);
+if ~all(eig(Mat_stab)<0)
+    disp("Instability");
+end
+s_start = 4;
+s_end = 64;
+s_step = 0.5;
+s = 0.5./[s_start:s_step:s_end];
+N_s = length(s);
+t_s = zeros(N_s,1);
+for j=1:N_s
+
+    % Generate data
+    rv1 = randn(q,N);
+    x0 = [0 -0.25 0 0 0 0]';
+    x = x0;
+    for i=1:N-1
+        u = -Kstar_approx*x(:,end);
+        dx = (A*x(:,end)+B*u)*dt +...
+            B*(G{1}*u*rv1(1,i)+G{2}*u*rv1(2,i))*sqrt(dt);
+        xnext = x(:,end)+dx;
+        if norm(xnext(1:2))<s(j)/2
+            break;
+        else
+            x = [x, xnext];
+        end
+    end
+    if i-1 == N
+        disp('Too short length!');
+        exit();
+    end
+    t_s(j) = i*dt;
+end
+x_s = log2(0.5./s);
+coef_log_NF = [x_s;ones(1,N_s)]'\t_s;
+subplot(3,2,1);
+plot(x_s,t_s,'b+');hold on;
+xline_log = log2(0.5./[s(end):0.01:s(1)]);
+yline_log_NF = xline_log.*coef_log_NF(1) + coef_log_NF(2);
+plot(xline_log,yline_log_NF,'m-','LineWidth',1);
+title('A');
+xlabel('$\log_2(2d/s)$','Interpreter','latex');
+ylabel('$t_f$','Interpreter','latex');
+xlim([1,7]);
+ylim([0,0.8]);
+
+x_sp = log(0.25./s);
+coef_power_NF = [x_sp;ones(1,N_s)]'\log(t_s);
+subplot(3,2,2);
+plot(x_sp,log(t_s),'b+');hold on;
+xline_power = log(0.25./[s(end):0.01:s(1)]);
+yline_power_NF = xline_power.*coef_power_NF(1) + coef_power_NF(2);
+plot(xline_power,yline_power_NF,'m-','LineWidth',1);
+title('B');
+xlabel('$\ln(d/s)$','Interpreter','latex');
+ylabel('$\ln(t_f)$','Interpreter','latex');
+xlim([0,4]);
+ylim([-1.5,0]);
+
+
+% VF
+load('Sensorimotor_mimic_VF');
+
+% Check stability
+Mat_stab = stochastic_sys_mat(K_hat(:,:,end));
+if ~all(eig(Mat_stab)<0)
+    disp("Instability");
+end
+
+for j=1:N_s
+
+    % Generate data
+    rv1 = randn(q,N);
+    x0 = [0 -0.25 0 0 0 0]';
+    x = x0;
+    for i=1:N-1
+        u = -K_hat(:,:,end)*x(:,end);
+        dx = (A*x(:,end)+B*u)*dt +...
+            B*(G{1}*u*rv1(1,i)+G{2}*u*rv1(2,i))*sqrt(dt);
+        xnext = x(:,end)+dx;
+        if norm(xnext(1:2))<s(j)/2
+            break;
+        else
+            x = [x, xnext];
+        end
+    end
+    if i-1 == N
+        disp('Too short length!');
+        exit();
+    end
+    t_s(j) = i*dt;
+end
+x_s = log2(0.5./s);
+coef_log_VF = [x_s;ones(1,N_s)]'\t_s;
+subplot(3,2,3);
+plot(x_s,t_s,'b+');hold on;
+xline_log = log2(0.5./[s(end):0.01:s(1)]);
+yline_log_VF = xline_log.*coef_log_VF(1) + coef_log_VF(2);
+plot(xline_log,yline_log_VF,'m-','LineWidth',1);
+title('C');
+xlabel('$\log_2(2d/s)$','Interpreter','latex');
+ylabel('$t_f$','Interpreter','latex');
+xlim([1,7]);
+ylim([0,0.8]);
+
+x_sp = log(0.25./s);
+coef_power_VF = [x_sp;ones(1,N_s)]'\log(t_s);
+subplot(3,2,4);
+plot(x_sp,log(t_s),'b+');hold on;
+xline_power = log(0.25./[s(end):0.01:s(1)]);
+yline_power_VF = xline_power.*coef_power_VF(1) + coef_power_VF(2);
+plot(xline_power,yline_power_VF,'m-','LineWidth',1);
+title('D');
+xlabel('$\ln(d/\gamma)$','Interpreter','latex');
+ylabel('$\ln(t_f)$','Interpreter','latex');
+xlim([0,4]);
+ylim([-1.5,0]);
+
+% DF
+load('Sensorimotor_mimic_DF');
+
+% Check stability
+Mat_stab = stochastic_sys_mat(K_hat(:,:,end));
+if ~all(eig(Mat_stab)<0)
+    disp("Instability");
+end
+
+for j=1:N_s
+
+    % Generate data
+    rv1 = randn(q,N);
+    x0 = [0 -0.25 0 0 0 0]';
+    x = x0;
+    for i=1:N-1
+        u = -K_hat(:,:,end)*x(:,end);
+        dx = (A*x(:,end)+B*u)*dt +...
+            B*(G{1}*u*rv1(1,i)+G{2}*u*rv1(2,i))*sqrt(dt);
+        xnext = x(:,end)+dx;
+        if norm(xnext(1:2))<s(j)/2
+            break;
+        else
+            x = [x, xnext];
+        end
+    end
+    if i-1 == N
+        disp('Too short length!');
+        exit();
+    end
+    t_s(j) = i*dt;
+end
+x_s = log2(0.5./s);
+coef_log_DF = [x_s;ones(1,N_s)]'\t_s;
+subplot(3,2,5);
+plot(x_s,t_s,'b+');hold on;
+xline_log = log2(0.5./[s(end):0.01:s(1)]);
+yline_log_DF = xline_log.*coef_log_DF(1) + coef_log_DF(2);
+plot(xline_log,yline_log_DF,'m-','LineWidth',1);
+title('E');
+xlabel('$\log_2(2d/\gamma)$','Interpreter','latex');
+ylabel('$t_f$','Interpreter','latex');
+xlim([1,7]);
+ylim([0,0.8]);
+
+x_sp = log(0.25./s);
+coef_power_DF = [x_sp;ones(1,N_s)]'\log(t_s);
+subplot(3,2,6);
+plot(x_sp,log(t_s),'b+');hold on;
+xline_power = log(0.25./[s(end):0.01:s(1)]);
+yline_power_DF = xline_power.*coef_power_DF(1) + coef_power_DF(2);
+plot(xline_power,yline_power_DF,'m-','LineWidth',1);
+title('F');
+xlabel('$\ln(d/\gamma)$','Interpreter','latex');
+ylabel('$\ln(t_f)$','Interpreter','latex');
+xlim([0,4]);
+ylim([-1.5,0]);

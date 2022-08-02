@@ -1,0 +1,9 @@
+clc;
+clear;
+load('Kstar_approx_NF');
+Kopt_NF = [Kstar_approx(1,1),0;
+    0,Kstar_approx(2,2);];
+load('Sensorimotor_mimic_VF');
+Kopt_VF = [K_hat(1,1,end), 0;
+    0,]
+plot();
